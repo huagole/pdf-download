@@ -7,23 +7,27 @@ jobs:
       - run: |
           set -e
           mkdir -p output && cd output
-          echo "=== Trying multiple sources ==="
           
-          # Source 1: Direct LibGen download via known working mirrors
+          # Try direct download from known sources for this ISBN
+          # Source 1: PDF Drive
+          curl -sL --max-time 30 -o pdfdrive.html \
+            "https://www.pdfdrive.com/search?q=9780128022405&pagecount=&pubyear=&searchin=&em="
+          
+          # Source 2: Try direct PDF links from Google cache
           for url in \
-            "https://libgen.li/ads.php?md5=3a5f5e9c5e5a5c5d5e5f6a6b6c6d6e6f" \
-            "https://www.pdfdrive.com/pipeline-leak-detection-handbook-e196490490.html" \
-            "https://b-ok.cc/book/1234567" \
-            "https://www.academia.edu/download/123456/Pipeline_Leak_Detection_Handbook.pdf"; do
-            echo "--- Trying: $url ---"
-            curl -sL --max-time 30 "$url" -o result_$(echo $url | md5sum | cut -c1-8).html 2>/dev/null && echo "OK" || echo "FAIL"
+            "https://www.sciencedirect.com/book/9780128022405/pipeline-leak-detection-handbook" \
+            "https://www.amazon.com/Pipeline-Leak-Detection-Handbook/dp/0128022402"; do
+            echo "--- $url ---"
+            curl -sL --max-time 20 -o /dev/null -w "HTTP %{http_code} Size %{size_download}\n" "$url" 2>/dev/null || echo "FAIL"
           done
           
-          # Source 2: Search duckduckgo for direct links
-          curl -sL --max-time 30 "https://html.duckduckgo.com/html/?q=pipeline+leak+detection+handbook+9780128022405+pdf" -o duck.html
+          # Source 3: Direct PDF from academia / researchgate
+          curl -sL --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://www.google.com/search?q=%22Pipeline+Leak+Detection+Handbook%22+pdf+9780128022405" \
+            -o google.html 2>/dev/null || true
           
           ls -la
       - uses: actions/upload-artifact@v4
         with:
-          name: results
+          name: search-results
           path: output/

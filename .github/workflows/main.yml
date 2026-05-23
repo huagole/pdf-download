@@ -4,31 +4,17 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Get download links from 1lib.sk
+      - name: Get full page and extract download urls
         run: |
           set -x
           mkdir -p output && cd output
 
-          # 1lib.sk returned book details - extract the real download link
+          # 1lib.sk returned the book page - extract the page
           curl -sL --max-time 60 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
             "https://1lib.sk/main/5522280" -o page.html
-          
-          echo "=== ALL HREFS ==="
-          grep -oP 'href="[^"]*"' page.html | sort -u | head -50
-          
-          echo "=== ANY download related ==="
-          grep -oP '(https?://[^"<> ]*pdf|/book/[^"<> ]*|/dl/[^"<> ]*)' page.html | sort -u | head -20
-          
-          echo "=== FORM ACTION ==="
-          grep -oP 'action="[^"]*"' page.html | head -10
-          
-          echo "=== BUTTONS ==="
-          grep -oP '(button|Button)[^>]*href="[^"]*"' page.html | head -10
-          grep -oP '(button|Button|btn)[^>]*onclick="[^"]*"' page.html | head -10
-          
-          echo "=== SCRIPT VARS ==="
-          grep -oP 'var [a-zA-Z_]* = "[^"]*"' page.html | head -20
-          grep -oP 'bookUrl|book_id|md5|hash' page.html | head -10
+
+          echo "=== FULL HTML (first 5000 chars) ==="
+          head -c 5000 page.html
 
       - uses: actions/upload-artifact@v4
         with:

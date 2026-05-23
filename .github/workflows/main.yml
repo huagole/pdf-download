@@ -4,49 +4,44 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Search and download
+      - name: Download from multiple sources
         run: |
           set -x
           mkdir -p output && cd output
-          
-          # Try direct LibGen download via known working mirror + md5 from existing search
-          # The libgen_search.html from previous run should show the book - use curl debug
-          
-          # Method 1: Try libgen.is with direct download for this ISBN
-          echo "=== SEARCH ==="
-          curl -sL --max-time 30 "https://libgen.is/search.php?req=9780128022405&page=1&sort=def&sortmode=ASC" -o search1.html
-          # Show what we got
-          grep -oP 'md5=[a-f0-9]{32}' search1.html | head -10
-          
-          # Method 2: Try each found md5 
-          for md5 in $(grep -oP 'md5=[a-f0-9]{32}' search1.html | head -3); do
-            echo "=== Trying md5: $md5 ==="
-            # Get the book page
-            curl -sL --max-time 30 "https://libgen.is/ads.php?$md5" -o "page_${md5:5:8}.html"
-            # Extract download link
-            grep -i 'href=' page_*.html | grep -iE '(get|download|libgen|library)' | head -5
+
+          download_and_check() {
+            local url="$1"
+            local name="$2"
+            echo "=== Trying: $url ==="
+            curl -sL --max-time 120 -H "User-Agent: Mozilla/5.0" -o "$name" "$url" 2>&1
+            local size=$(stat -c%s "$name" 2>/dev/null || echo 0)
+            local type=$(file "$name" 2>/dev/null | cut -d: -f2)
+            echo "  Size: $size bytes, Type: $type"
+            if [ "$size" -gt 100000 ] && echo "$type" | grep -qiE 'pdf|epub|djvu'; then
+              echo "FOUND!"
+              return 0
+            fi
+            rm -f "$name"
+            return 1
+          }
+
+          download_and_check "https://b-ok.cc/dl/5522280/8cf48d" "book.pdf" && exit 0
+          download_and_check "https://archive.org/download/faultdiagnosisind00lian_0/faultdiagnosisind00lian_0.pdf" "book.pdf" && exit 0
+          download_and_check "https://books.google.com/books/download?id=5a_CBgAAQBAJ&output=pdf" "book.pdf" && exit 0
+
+          for url in https://b-ok.cc/book/5522280/8cf48d https://zh.b-ok.cc/book/5522280/8cf48d https://1lib.sk/book/5522280/8cf48d https://annas-archive.org/md5/5522280; do
+            echo "=== Scraping: $url ==="
+            html=$(curl -sL --max-time 30 "$url" 2>/dev/null)
+            echo "$html" | grep -oP 'href="[^"]*.pdf"' | head -5
           done
-          
-          # Method 3: Try known good download patterns for this specific book
-          # Try IPFS with known CID patterns from libgen
-          for md5 in $(grep -oP 'md5=[a-f0-9]{32}' search1.html | head -3); do
-            id="${md5:5}"
-            for url in \
-              "https://library.lol/main/$id" \
-              "https://download.library.lol/main/$id" \
-              "https://libgen.li/ads.php?md5=$id"; do
-              echo "Trying: $url"
-              curl -sL --max-time 60 -o "book_${id:0:8}.pdf" "$url" 2>/dev/null
-              file book_*.pdf 2>/dev/null | grep -v "HTML" && echo "FOUND PDF!" && break
-            done
-          done
-          
-          # List results
+
+          download_and_check "https://annas-archive.org/d/5522280" "book.pdf" && exit 0
+
           echo "=== FILES ==="
           ls -la
           echo "=== FILE TYPES ==="
           file * 2>/dev/null
-          
+
       - uses: actions/upload-artifact@v4
         with:
           name: book-files

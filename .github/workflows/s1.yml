@@ -5,22 +5,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          mkdir o && cd o
-          echo "=== API search by ISBN ==="
-          curl -sL --max-time 30 "https://libgen.li/journal.php?req=9780128022405&column=isbn&res=25&sort=def&sortmode=ASC&pagesize=25" -o r.html
-          file r.html
-          grep -o '<td[^>]*>' r.html | head -5
-          grep -oP '(?<=<td class="res">)[^<]+' r.html | head -10
-          grep -oP '(?<=<td>)[^<]+' r.html | head -20
-          echo "=== Also try libgen.is / libgen.rs ==="
-          for site in libgen.is libgen.rs libgen.st; do
-            echo "--- $site ---"
-            curl -sL --max-time 20 -H "Accept: text/html" "https://$site/index.php?req=9780128022405&column=isbn" -o r_${site}.html 2>&1
-            file r_${site}.html
-            wc -c r_${site}.html
-            grep -oP '(?<=<a[^>]*>)[^<]+' r_${site}.html | head -5
-          done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: o
-          path: o/
+          set +e
+          cd /tmp
+          echo "=== Search libgen.li by ISBN ==="
+          curl -sL --max-time 30 "https://libgen.li/index.php?req=9780128022405&columns%5B%5D=t|a|s|y|p&res=100&sort=title&sortmode=ASC" -o r.html
+          wc -c r.html
+          echo "=== Extract book info ==="
+          grep -oP '<a[^>]*>[^<]{10,100}</a>' r.html | grep -vi 'index\|login\|register\|rss\|libgen\|favicon' | head -20
+      - run: |
+          set +e
+          cd /tmp
+          echo "=== Search by title ==="
+          curl -sL --max-time 30 "https://libgen.li/index.php?req=Pipeline+Leak+Detection+Handbook&columns%5B%5D=t|a|s|y|p&res=100" -o r2.html
+          wc -c r2.html
+          grep -oP '<a[^>]*>[^<]{10,100}</a>' r2.html | grep -vi 'index\|login\|register\|rss\|libgen\|favicon' | head -20

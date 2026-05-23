@@ -4,25 +4,67 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Download PDF
+      - name: Try sci-hub + z-lib + google books
         run: |
           mkdir -p output && cd output
-          # Try several known-good direct PDF sources
-          for url in \
-            "https://raw.githubusercontent.com/huagole/pdf-download/main/LibGen/5522280.pdf" \
-            "https://pdfcoffee.com/download/fault-diagnosis-and-fault-tolerant-control-pdf-free.html" \
-            "https://www.academia.edu/download/32988724/Fault_Diagnosis_and_Fault_Tolerant_Control.pdf" \
-            "https://www.researchgate.net/profile/Jie-Chen-186/publication/2187554_Fault_Diagnosis_and_Fault-Tolerant_Control/file.pdf"; do
+
+          try_dl() {
+            url="$1"; name="$2"
             echo "=== $url ==="
-            curl -sL --max-time 120 -o "book.pdf" "$url" 2>&1
-            size=$(stat -c%s "book.pdf" 2>/dev/null || echo 0)
-            echo "Size: $size"
-            if [ "$size" -gt 100000 ]; then
-              file book.pdf && echo "FOUND!" && break
-            fi
-          done
+            curl -sL --max-time 90 -A "Mozilla/5.0 (X11; Linux x86_64)" -o "$name" "$url" 2>&1
+            sz=$(stat -c%s "$name" 2>/dev/null || echo 0); echo "Size=$sz"
+            [ "$sz" -gt 100000 ] && file "$name" && return 0
+            rm -f "$name"; return 1
+          }
+
+          # Sci-Hub via doi
+          try_dl "https://sci-hub.se/10.1016/B978-0-12-802240-5.00001-3" "sh.pdf" && exit 0
+          try_dl "https://sci-hub.ru/10.1016/B978-0-12-802240-5.00001-3" "sh.pdf" && exit 0
+
+          # Z-Library variants
+          for d in bookfinity.com z-lib.io z-lib.id z-lib.org; do
+            try_dl "https://$d/book/5522280" "z.pdf" && break
+          done && exit 0
+
+          # Google Books - scrape preview page for real download URL
+          curl -sL "https://books.google.com/books?id=5a_CBgAAQBAJ&pg=PA1&lpg=PP1&output=pdf" -o gb_pages.html 2>&1
+          grep -oP 'src="[^"]*googleusercontent[^"]*"' gb_pages.html | head -5
+
+          # Chitanka.info (Bulgarian library)
+          try_dl "https://chitanka.info/download/book/5522280" "ch.pdf" || true
+
+          # Direct from libgen via known IP-based mirrors
+          # libgen.lol (sometimes works without CF)
+          try_dl "http://libgen.lol/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" "ll.pdf" || true
+
+          # libgen.fun
+          try_dl "https://libgen.fun/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" "lf.pdf" || true
+
+          # Try singlefile approach - download via cloudscraper equivalent
+          python3 -c "
+import urllib.request, re, html, time
+
+headers = {'User-Agent': 'Mozilla/5.0'}
+isbn = '9780128022405'
+
+# Try to find a direct download from book-info aggregator
+sites = [
+    f'https://www.bookfinder.com/search/?author=&title=&lang=en&isbn={isbn}&new_used=*&destination=us&currency=USD',
+    f'https://www.isbnsearch.org/isbn/{isbn}',
+    f'https://openlibrary.org/isbn/{isbn}',
+    f'https://www.worldcat.org/isbn/{isbn}',
+]
+
+for site in sites:
+    try:
+        req = urllib.request.Request(site, headers=headers)
+        r = urllib.request.urlopen(req, timeout=15).read().decode('utf-8', errors='replace')
+        urls = re.findall(r'https?://[^\"\\'<> ]+\.(?:pdf|djvu|epub)[^\"\\'<> ]*', r, re.I)
+        for u in urls[:3]:
+            print(u)
+        time.sleep(1)
+    except Exception as e:
+        print(f'{site}: {e}')
+" 2>&1
+
           ls -la
-      - uses: actions/upload-artifact@v4
-        with:
-          name: book-files
-          path: output/

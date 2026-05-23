@@ -6,19 +6,20 @@ jobs:
     steps:
       - run: |
           mkdir o && cd o
-          # Use libgen search API directly
-          echo "=== Searching by ISBN via libgen API ==="
-          curl -sL --max-time 30 -A 'Mozilla/5.0' -o results.xml "https://libgen.li/journal.php?req=9780128022405&column=isbn&res=25&sort=def&sortmode=ASC&pagesize=25"
-          wc -c results.xml
-          file results.xml
-          echo "=== Also try PipeLine Leak Detection Handbook ==="
-          curl -sL --max-time 30 -A 'Mozilla/5.0' -o r2.xml "https://libgen.li/journal.php?req=Pipeline+Leak+Detection+Handbook&column=title&res=25"
-          wc -c r2.xml
-          file r2.xml
-          echo "=== Show text content ==="
-          cat results.xml 2>/dev/null | strings | head -50
-          echo "---"
-          cat r2.xml 2>/dev/null | strings | head -50
+          echo "=== API search by ISBN ==="
+          curl -sL --max-time 30 "https://libgen.li/journal.php?req=9780128022405&column=isbn&res=25&sort=def&sortmode=ASC&pagesize=25" -o r.html
+          file r.html
+          grep -o '<td[^>]*>' r.html | head -5
+          grep -oP '(?<=<td class="res">)[^<]+' r.html | head -10
+          grep -oP '(?<=<td>)[^<]+' r.html | head -20
+          echo "=== Also try libgen.is / libgen.rs ==="
+          for site in libgen.is libgen.rs libgen.st; do
+            echo "--- $site ---"
+            curl -sL --max-time 20 -H "Accept: text/html" "https://$site/index.php?req=9780128022405&column=isbn" -o r_${site}.html 2>&1
+            file r_${site}.html
+            wc -c r_${site}.html
+            grep -oP '(?<=<a[^>]*>)[^<]+' r_${site}.html | head -5
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: o

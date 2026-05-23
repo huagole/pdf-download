@@ -1,0 +1,23 @@
+yaml
+    name: Download PDF
+
+    on:
+      workflow_dispatch:
+        inputs:
+          url:
+            description: 'PDF URL to download'
+            required: true
+
+    jobs:
+      download:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Download PDF
+            run: |
+              curl -L -o book.pdf "${{ github.event.inputs.url }}"
+
+          - name: Upload as artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: book-pdf
+              path: book.pdf

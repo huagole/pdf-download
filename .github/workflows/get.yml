@@ -1,6 +1,7 @@
 yaml
+
     name: fetch
-    'on': workflow_dispatch
+    on: [workflow_dispatch]
     jobs:
       dl:
         runs-on: ubuntu-latest

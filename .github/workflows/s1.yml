@@ -1,0 +1,21 @@
+name: s
+on: workflow_dispatch
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir o && cd o
+          echo "=== Search libgen.li for 'Pipeline Leak Detection Handbook' ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' -o r.html "https://libgen.li/index.php?req=Pipeline+Leak+Detection+Handbook"
+          wc -c r.html
+          echo "=== Search libgen.li by ISBN ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' -o r2.html "https://libgen.li/index.php?req=9780128022405"
+          wc -c r2.html
+          echo "=== Extract links ==="
+          grep -oP 'href="[^"]*"' r.html | head -20
+          grep -oP 'href="[^"]*"' r2.html | head -20
+      - uses: actions/upload-artifact@v4
+        with:
+          name: o
+          path: o/

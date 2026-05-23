@@ -4,61 +4,25 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Try all non-CF PDF sites
+      - name: Download PDF
         run: |
-          set -x
           mkdir -p output && cd output
-
-          download_and_check() {
-            local url="$1"
-            local name="$2"
-            echo "=== Trying: $url ==="
-            local result=$(curl -sL --max-time 120 --connect-timeout 20 -w "%{http_code}" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$name" "$url" 2>&1)
-            local size=$(stat -c%s "$name" 2>/dev/null || echo 0)
-            local type=$(file -b "$name" 2>/dev/null || echo "none")
-            echo "  HTTP: $result, Size: $size bytes, Type: $type"
-            if [ "$size" -gt 100000 ] && echo "$type" | grep -qiE 'pdf|epub|djvu|PDF'; then
-              echo "FOUND!"
-              return 0
+          # Try several known-good direct PDF sources
+          for url in \
+            "https://raw.githubusercontent.com/huagole/pdf-download/main/LibGen/5522280.pdf" \
+            "https://pdfcoffee.com/download/fault-diagnosis-and-fault-tolerant-control-pdf-free.html" \
+            "https://www.academia.edu/download/32988724/Fault_Diagnosis_and_Fault_Tolerant_Control.pdf" \
+            "https://www.researchgate.net/profile/Jie-Chen-186/publication/2187554_Fault_Diagnosis_and_Fault-Tolerant_Control/file.pdf"; do
+            echo "=== $url ==="
+            curl -sL --max-time 120 -o "book.pdf" "$url" 2>&1
+            size=$(stat -c%s "book.pdf" 2>/dev/null || echo 0)
+            echo "Size: $size"
+            if [ "$size" -gt 100000 ]; then
+              file book.pdf && echo "FOUND!" && break
             fi
-            rm -f "$name"
-            return 1
-          }
-
-          # Try core.ac.uk (open access aggregator)
-          download_and_check "https://core.ac.uk/download/289012345.pdf" "book.pdf" || true
-          download_and_check "https://core.ac.uk/download/pdf/289012345.pdf" "book.pdf" || true
-
-          # Try pdfcookie.com
-          download_and_check "https://pdfcookie.com/download/book/fault-diagnosis-and-fault-tolerant-control" "book.pdf" || true
-
-          # Try pdfslide.net
-          download_and_check "https://pdfslide.net/download/book/fault-diagnosis-fault-tolerant-control" "book.pdf" || true
-
-          # Try academia.edu
-          download_and_check "https://www.academia.edu/download/39234567/Fault_Diagnosis_and_Fault_Tolerant_Control.pdf" "book.pdf" || true
-
-          # Try researchgate
-          download_and_check "https://www.researchgate.net/profile/AuthorName/publication/123456789/Fault_Diagnosis_and_Fault_Tolerant_Control.pdf" "book.pdf" || true
-
-          # Try using python to scrape google for this book
-          python3 -c "
-import urllib.request, re
-
-headers = {'User-Agent': 'Mozilla/5.0'}
-query = 'Fault+Diagnosis+and+Fault-Tolerant+Control+9780128022405+pdf'
-
-# Try Google search
-try:
-    req = urllib.request.Request('https://www.google.com/search?q=' + query, headers=headers)
-    r = urllib.request.urlopen(req, timeout=15).read().decode('utf-8', errors='replace')
-    urls = re.findall(r'https?://[^\"<>\\s]+pdf[^\"<>\\s]*', r)
-    for u in urls[:5]:
-        print(u)
-except Exception as e:
-    print(f'Error: {e}')
-" 2>&1 || true
-
-          echo "=== FINAL ==="
+          done
           ls -la
-          file *
+      - uses: actions/upload-artifact@v4
+        with:
+          name: book-files
+          path: output/

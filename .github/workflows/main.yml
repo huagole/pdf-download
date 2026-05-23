@@ -1,6 +1,4 @@
-YAML 内容如下，你替换掉原来的 .github/workflows/main.yml：
-
-    yaml
+yaml
     name: download-book
     on: workflow_dispatch
     jobs:
@@ -9,9 +7,9 @@ YAML 内容如下，你替换掉原来的 .github/workflows/main.yml：
         steps:
           - run: |
               mkdir -p output && cd output
-              curl -sL --max-time 60 "https://annas-archive.org/search?q=9780128022405+pipeline+leak+detection+handbook" -o search.html
-              cat search.html | grep -oP 'href="/md5/[a-f0-9]+"' | head -10
+              curl -sL --max-time 60 "https://annas-archive.org/search?q=9780128022405" -o search.html
+              cat search.html
           - uses: actions/upload-artifact@v4
             with:
-              name: book-results
+              name: results
               path: output/

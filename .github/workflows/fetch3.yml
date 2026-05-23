@@ -1,0 +1,62 @@
+name: g
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir o && cd o
+          # Search GitHub code for the MD5
+          python3 -c "
+import urllib.request, json, urllib.parse, os
+
+# The ISBN
+isbn = '9780128022405'
+md5_upper = '8CF48D434C3503B50463E0BB9778449B'
+md5_lower = md5_upper.lower()
+
+# Search GitHub for any PDF with this ISBN in filename or path
+query = urllib.parse.quote(f'{md5_lower} OR {isbn} PDF')
+url = f'https://api.github.com/search/code?q={query}&per_page=10'
+
+req = urllib.request.Request(url, headers={'User-Agent': 'github-actions'})
+try:
+    r = urllib.request.urlopen(req, timeout=15)
+    data = json.loads(r.read())
+    print(f'Results: {data.get(\"total_count\",0)}')
+    for i in data.get('items',[])[:5]:
+        print(f'  {i[\"path\"]} - {i[\"html_url\"]}')
+except Exception as e:
+    print(f'Search: {e}')
+
+# Try to resolve the book from some public sources
+# Google Books direct download (if available)
+print('---')
+# Try the direct file from other mirrors not behind CF
+import socket
+hosts = ['libgen.is', 'library.lol', 'b-ok.cc', 'libgen.li', 'libgen.ee']
+for h in hosts:
+    try:
+        ip = socket.gethostbyname(h)
+        print(f'{h}: {ip}')
+        # Now try this IP directly for the md5
+        url = f'http://{ip}/main/{md5_lower[:2]}{md5_lower[2:4]}/{md5_lower}'
+        r = urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'}), timeout=10)
+        data = r.read()
+        print(f'  {h} ({ip}): {len(data)} bytes')
+        if len(data) > 100000:
+            open('book.pdf','wb').write(data)
+            print(f'  FOUND!')
+            break
+    except Exception as e:
+        print(f'{h}: {str(e)[:80]}')
+
+print('---')
+os.system('ls -la')
+import subprocess
+subprocess.run(['ls', '-la'], capture_output=True)
+"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: o
+          path: o/

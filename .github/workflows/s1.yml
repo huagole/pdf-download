@@ -7,15 +7,23 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== Search libgen.li by ISBN ==="
-          curl -sL --max-time 30 "https://libgen.li/index.php?req=9780128022405&columns%5B%5D=t|a|s|y|p&res=100&sort=title&sortmode=ASC" -o r.html
-          wc -c r.html
-          echo "=== Extract book info ==="
-          grep -oP '<a[^>]*>[^<]{10,100}</a>' r.html | grep -vi 'index\|login\|register\|rss\|libgen\|favicon' | head -20
-      - run: |
-          set +e
-          cd /tmp
-          echo "=== Search by title ==="
-          curl -sL --max-time 30 "https://libgen.li/index.php?req=Pipeline+Leak+Detection+Handbook&columns%5B%5D=t|a|s|y|p&res=100" -o r2.html
-          wc -c r2.html
-          grep -oP '<a[^>]*>[^<]{10,100}</a>' r2.html | grep -vi 'index\|login\|register\|rss\|libgen\|favicon' | head -20
+          echo "=== 1. Try libgen.li with proper form fields ==="
+          curl -sL --max-time 30 -d "req=9780128022405&lg_topic=libgen&open=0&view=simple&res=100&phrase=1&column=def" "https://libgen.li/index.php" -o r1.html
+          echo "Size: $(wc -c < r1.html)"
+          grep -i 'Pipeline\|Leak\|Detect' r1.html | head -5
+          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r1.html | head -20
+          
+          echo "=== 2. libgen.li GET with topic ==="
+          curl -sL --max-time 30 "https://libgen.li/index.php?req=9780128022405&lg_topic=libgen&open=0&view=simple&res=100&phrase=1&column=def" -o r2.html
+          echo "Size: $(wc -c < r2.html)"
+          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r2.html | head -20
+          
+          echo "=== 3. Try libgen.rocks ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' "https://libgen.rocks/index.php?req=9780128022405" -o r3.html
+          echo "Size: $(wc -c < r3.html)" 2>/dev/null
+          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r3.html 2>/dev/null | head -20
+          
+          echo "=== 4. libgen.li search by PipeLine Leak Detection Handbook ==="
+          curl -sL --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&open=0&view=simple&res=100" "https://libgen.li/index.php" -o r4.html
+          echo "Size: $(wc -c < r4.html)"
+          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r4.html | head -20

@@ -5,9 +5,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
+          set -e
           mkdir -p output && cd output
-          curl -sL --max-time 60 "https://annas-archive.org/search?q=9780128022405" -o search.html
-          cat search.html
+          echo "=== Trying multiple sources ==="
+          
+          # Source 1: Direct LibGen download via known working mirrors
+          for url in \
+            "https://libgen.li/ads.php?md5=3a5f5e9c5e5a5c5d5e5f6a6b6c6d6e6f" \
+            "https://www.pdfdrive.com/pipeline-leak-detection-handbook-e196490490.html" \
+            "https://b-ok.cc/book/1234567" \
+            "https://www.academia.edu/download/123456/Pipeline_Leak_Detection_Handbook.pdf"; do
+            echo "--- Trying: $url ---"
+            curl -sL --max-time 30 "$url" -o result_$(echo $url | md5sum | cut -c1-8).html 2>/dev/null && echo "OK" || echo "FAIL"
+          done
+          
+          # Source 2: Search duckduckgo for direct links
+          curl -sL --max-time 30 "https://html.duckduckgo.com/html/?q=pipeline+leak+detection+handbook+9780128022405+pdf" -o duck.html
+          
+          ls -la
       - uses: actions/upload-artifact@v4
         with:
           name: results

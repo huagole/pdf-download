@@ -1,12 +1,11 @@
 yaml
     name: Fetch PDF
-    run-name: Fetch PDF ${{ inputs.query }}
 
     on:
       workflow_dispatch:
         inputs:
           source:
-            description: libgen / direct
+            description: libgen or direct
             required: true
             default: libgen
           query:
@@ -18,22 +17,15 @@ yaml
         runs-on: ubuntu-latest
         steps:
           - name: Install tools
-            run: |
-              sudo apt-get update -qq
-              sudo apt-get install -y -qq curl wget
+            run: sudo apt-get update -qq && sudo apt-get install -y -qq curl wget
 
           - name: Fetch from LibGen
-            if: ${{ inputs.source == 'libgen' }}
-            run: |
-              curl -sL --max-time 30 "https://libgen.is/search.php?req=${{ inputs.query }}" -o page.html
-              wc -c page.html
-              head -c 3000 page.html
+            if: inputs.source == 'libgen'
+            run: curl -sL --max-time 30 "https://libgen.is/search.php?req=${{ inputs.query }}" -o page.html && wc -c page.html && head -c 3000 page.html
 
           - name: Direct download
-            if: ${{ inputs.source == 'direct' }}
-            run: |
-              curl -sL --max-time 60 -o book.pdf "${{ inputs.query }}"
-              ls -la book.pdf
+            if: inputs.source == 'direct'
+            run: curl -sL --max-time 60 -o book.pdf "${{ inputs.query }}" && ls -la book.pdf
 
           - name: Upload
             uses: actions/upload-artifact@v4

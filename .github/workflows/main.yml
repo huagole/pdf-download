@@ -1,23 +1,55 @@
 yaml
-    name: Download PDF
+    name: Fetch PDF
 
     on:
       workflow_dispatch:
         inputs:
-          url:
-            description: 'PDF URL to download'
+          source:
+            description: 'Source: libgen / annas / direct'
+            required: true
+            default: 'libgen'
+          query:
+            description: 'ISBN or search query'
             required: true
 
     jobs:
-      download:
+      fetch:
         runs-on: ubuntu-latest
         steps:
-          - name: Download PDF
+          - name: Install tools
             run: |
-              curl -L -o book.pdf "${{ github.event.inputs.url }}"
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq curl wget python3 2>/dev/null
 
-          - name: Upload as artifact
+          - name: Fetch from source
+            run: |
+              case "${{ github.event.inputs.source }}" in
+                libgen)
+                  echo "Searching LibGen for: ${{ github.event.inputs.query }}"
+                  curl -sL "https://libgen.is/search.php?req=${{ github.event.inputs.query }}&open=0&res=25&view=simple&phrase=1&column=def" -o page.html
+                  cat page.html | python3 -c "
+    import sys, re, html
+    with open('page.html') as f:
+        content = f.read()
+    links = re.findall(r'<a[^>]href=\"(book/index\.php[^\"])\"[^>]*>([^<]+)</a>', content)
+    print(f'Found {len(links)} book links')
+    for href, title in links[:5]:
+        print(f'{title.strip()}: {href}')
+    "
+                  ;;
+                direct)
+                  echo "Downloading directly..."
+                  curl -sL -o book.pdf "${{ github.event.inputs.query }}" || echo "Download failed"
+                  ;;
+                *)
+                  echo "Unknown source"
+                  ;;
+              esac
+
+          - name: Upload PDF if found
             uses: actions/upload-artifact@v4
             with:
-              name: book-pdf
-              path: book.pdf
+              name: result
+              path: |
+                book.pdf
+                page.html

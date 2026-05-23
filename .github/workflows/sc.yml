@@ -1,0 +1,27 @@
+name: getbook
+on: workflow_dispatch
+jobs:
+  dl:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir o && cd o
+          python3 -c "
+import urllib.request, os, time
+md5='8CF48D434C3503B50463E0BB9778449B'
+ips=['93.174.95.27','62.182.86.140','194.26.200.101','185.39.10.101','31.42.184.140']
+for ip in ips:
+  url=f'http://{ip}/main/{md5[:2]}{md5[2:4]}/{md5}'
+  try:
+    r=urllib.request.urlopen(url,timeout=10)
+    data=r.read()
+    print(f'{ip}: {len(data)} bytes')
+    if len(data)>50000:
+      open('book.pdf','wb').write(data); print('FOUND!'); break
+  except Exception as e: print(f'{ip}: {e}')
+os.system('ls -la')
+"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: files
+          path: o/

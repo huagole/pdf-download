@@ -4,30 +4,31 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Scrape libgen.li for download link
+      - name: Get download links from 1lib.sk
         run: |
           set -x
           mkdir -p output && cd output
+
+          # 1lib.sk returned book details - extract the real download link
+          curl -sL --max-time 60 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            "https://1lib.sk/main/5522280" -o page.html
           
-          # Get the book info page from libgen.li (it responded before)
-          curl -sL --max-time 60 -H "User-Agent: Mozilla/5.0" \
-            "https://libgen.li/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" \
-            -o libgen_li.html
+          echo "=== ALL HREFS ==="
+          grep -oP 'href="[^"]*"' page.html | sort -u | head -50
           
-          echo "=== EXTRACTING LINKS ==="
-          # Extract all hrefs
-          grep -oP 'href="[^"]*"' libgen_li.html | head -30
+          echo "=== ANY download related ==="
+          grep -oP '(https?://[^"<> ]*pdf|/book/[^"<> ]*|/dl/[^"<> ]*)' page.html | sort -u | head -20
           
-          echo "=== IFRAMES ==="
-          grep -oP 'src="[^"]*"' libgen_li.html | head -10
+          echo "=== FORM ACTION ==="
+          grep -oP 'action="[^"]*"' page.html | head -10
           
-          echo "=== FORMS ==="
-          grep -oP 'action="[^"]*"' libgen_li.html | head -10
+          echo "=== BUTTONS ==="
+          grep -oP '(button|Button)[^>]*href="[^"]*"' page.html | head -10
+          grep -oP '(button|Button|btn)[^>]*onclick="[^"]*"' page.html | head -10
           
-          echo "=== DOWNLOAD LINKS ==="
-          grep -iP 'href="[^"]*"' libgen_li.html | grep -iE 'GET|cloud|galaxy|space|libgen|download|dl' | head -20
-          
-          wc -c libgen_li.html
+          echo "=== SCRIPT VARS ==="
+          grep -oP 'var [a-zA-Z_]* = "[^"]*"' page.html | head -20
+          grep -oP 'bookUrl|book_id|md5|hash' page.html | head -10
 
       - uses: actions/upload-artifact@v4
         with:

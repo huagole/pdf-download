@@ -4,22 +4,68 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Search and download
+      - name: Try all known accessible sources
         run: |
           set -x
           mkdir -p output && cd output
 
-          # Annas Archive - first get the md5 page to find download links
-          echo "=== FETCHING ANNAS ARCHIVE ==="
-          curl -sL --max-time 60 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" "https://annas-archive.org/md5/5522280" -o annas.html 2>&1
-          wc -c annas.html
-          # Extract download links from the page
-          grep -oP 'href="[^"]+"' annas.html | grep -iE '\.(pdf|epub|djvu|mobi)|/dl/|/download' | head -20
+          download_and_check() {
+            local url="$1"
+            local name="$2"
+            echo "=== Trying: $url ==="
+            curl -sL --max-time 120 --connect-timeout 20 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -o "$name" "$url" 2>&1
+            local size=$(stat -c%s "$name" 2>/dev/null || echo 0)
+            local type=$(file -b "$name" 2>/dev/null || echo "none")
+            echo "  Size: $size bytes, Type: $type"
+            if [ "$size" -gt 100000 ] && echo "$type" | grep -qiE 'pdf|epub|djvu|PDF'; then
+              echo "FOUND!"
+              return 0
+            fi
+            rm -f "$name"
+            return 1
+          }
 
-          # Also extract md5 hash and any direct links
-          grep -oP 'md5=[a-f0-9]{32}' annas.html | head -5
-          grep -oP 'href="/d/([a-f0-9]+)"' annas.html | head -5
-          grep -oP 'href="/slow_download/[^"]*"' annas.html | head -5
+          # Source 1: Library.lol direct
+          download_and_check "https://library.lol/main/5522280" "out.pdf" || true
+          download_and_check "https://library.lol/main/8CF48D434C3503B50463E0BB9778449B" "out.pdf" || true
+
+          # Source 2: libgen.li
+          download_and_check "https://libgen.li/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" "out.pdf" || true
+
+          # Source 3: libgen.rocks
+          download_and_check "https://libgen.rocks/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" "out.pdf" || true
+
+          # Source 4: BookSC / BookFI
+          download_and_check "https://booksc.org/dl/5522280/8cf48d" "out.pdf" || true
+
+          # Source 5: PdfCoffee
+          download_and_check "https://pdfcoffee.com/download/fault-diagnosis-and-fault-tolerant-control-2.html" "out.pdf" || true
+
+          # Source 6: 1lib.cloud
+          for domain in 1lib.cloud 1lib.sk 1lib.to 1lib.at; do
+            download_and_check "https://$domain/main/5522280" "out.pdf" && break
+          done || true
+
+          # Source 7: libgen.gs
+          download_and_check "https://libgen.gs/ads.php?md5=8CF48D434C3503B50463E0BB9778449B" "out.pdf" || true
+
+          # Source 8: Try getting download link via libgen search
+          echo "=== Search libgen ==="
+          for mirror in libgen.is libgen.rs libgen.st libgen.li; do
+            echo "Trying $mirror..."
+            curl -sL --max-time 30 --connect-timeout 10 "https://$mirror/search.php?req=9780128022405" -o "search_${mirror}.html" 2>/dev/null
+            if [ -f "search_${mirror}.html" ] && [ "$(stat -c%s "search_${mirror}.html" 2>/dev/null || echo 0)" -gt 1000 ]; then
+              echo "  Got response from $mirror"
+              grep -oP 'href="[^"]*"' "search_${mirror}.html" | grep -iE 'get|dl='
+              break
+            fi
+          done
+
+          echo "=== FINAL FILES ==="
+          ls -la
+          echo "=== TYPES ==="
+          file *
+          ls -la output/ 2>/dev/null
 
       - uses: actions/upload-artifact@v4
         with:

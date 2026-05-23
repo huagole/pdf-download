@@ -1,15 +1,14 @@
-yaml
-    name: download-book
-    on: workflow_dispatch
-    jobs:
-      download:
-        runs-on: ubuntu-latest
-        steps:
-          - run: |
-              mkdir -p output && cd output
-              curl -sL --max-time 60 "https://annas-archive.org/search?q=9780128022405" -o search.html
-              cat search.html
-          - uses: actions/upload-artifact@v4
-            with:
-              name: results
-              path: output/
+name: download-book
+on: workflow_dispatch
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir -p output && cd output
+          curl -sL --max-time 60 "https://annas-archive.org/search?q=9780128022405" -o search.html
+          cat search.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results
+          path: output/

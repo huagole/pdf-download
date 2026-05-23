@@ -4,43 +4,22 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Download from multiple sources
+      - name: Search and download
         run: |
           set -x
           mkdir -p output && cd output
 
-          download_and_check() {
-            local url="$1"
-            local name="$2"
-            echo "=== Trying: $url ==="
-            curl -sL --max-time 120 -H "User-Agent: Mozilla/5.0" -o "$name" "$url" 2>&1
-            local size=$(stat -c%s "$name" 2>/dev/null || echo 0)
-            local type=$(file "$name" 2>/dev/null | cut -d: -f2)
-            echo "  Size: $size bytes, Type: $type"
-            if [ "$size" -gt 100000 ] && echo "$type" | grep -qiE 'pdf|epub|djvu'; then
-              echo "FOUND!"
-              return 0
-            fi
-            rm -f "$name"
-            return 1
-          }
+          # Annas Archive - first get the md5 page to find download links
+          echo "=== FETCHING ANNAS ARCHIVE ==="
+          curl -sL --max-time 60 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" "https://annas-archive.org/md5/5522280" -o annas.html 2>&1
+          wc -c annas.html
+          # Extract download links from the page
+          grep -oP 'href="[^"]+"' annas.html | grep -iE '\.(pdf|epub|djvu|mobi)|/dl/|/download' | head -20
 
-          download_and_check "https://b-ok.cc/dl/5522280/8cf48d" "book.pdf" && exit 0
-          download_and_check "https://archive.org/download/faultdiagnosisind00lian_0/faultdiagnosisind00lian_0.pdf" "book.pdf" && exit 0
-          download_and_check "https://books.google.com/books/download?id=5a_CBgAAQBAJ&output=pdf" "book.pdf" && exit 0
-
-          for url in https://b-ok.cc/book/5522280/8cf48d https://zh.b-ok.cc/book/5522280/8cf48d https://1lib.sk/book/5522280/8cf48d https://annas-archive.org/md5/5522280; do
-            echo "=== Scraping: $url ==="
-            html=$(curl -sL --max-time 30 "$url" 2>/dev/null)
-            echo "$html" | grep -oP 'href="[^"]*.pdf"' | head -5
-          done
-
-          download_and_check "https://annas-archive.org/d/5522280" "book.pdf" && exit 0
-
-          echo "=== FILES ==="
-          ls -la
-          echo "=== FILE TYPES ==="
-          file * 2>/dev/null
+          # Also extract md5 hash and any direct links
+          grep -oP 'md5=[a-f0-9]{32}' annas.html | head -5
+          grep -oP 'href="/d/([a-f0-9]+)"' annas.html | head -5
+          grep -oP 'href="/slow_download/[^"]*"' annas.html | head -5
 
       - uses: actions/upload-artifact@v4
         with:

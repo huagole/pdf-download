@@ -1,0 +1,25 @@
+name: s
+on: workflow_dispatch
+jobs:
+  s:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir o && cd o
+          # Use libgen search API directly
+          echo "=== Searching by ISBN via libgen API ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' -o results.xml "https://libgen.li/journal.php?req=9780128022405&column=isbn&res=25&sort=def&sortmode=ASC&pagesize=25"
+          wc -c results.xml
+          file results.xml
+          echo "=== Also try PipeLine Leak Detection Handbook ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' -o r2.xml "https://libgen.li/journal.php?req=Pipeline+Leak+Detection+Handbook&column=title&res=25"
+          wc -c r2.xml
+          file r2.xml
+          echo "=== Show text content ==="
+          cat results.xml 2>/dev/null | strings | head -50
+          echo "---"
+          cat r2.xml 2>/dev/null | strings | head -50
+      - uses: actions/upload-artifact@v4
+        with:
+          name: o
+          path: o/

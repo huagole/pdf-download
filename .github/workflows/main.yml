@@ -1,15 +1,16 @@
 yaml
     name: Fetch PDF
+    run-name: Fetch PDF ${{ inputs.query }}
 
     on:
       workflow_dispatch:
         inputs:
           source:
-            description: 'Source: libgen / annas / direct'
+            description: libgen / direct
             required: true
-            default: 'libgen'
+            default: libgen
           query:
-            description: 'ISBN or search query'
+            description: ISBN or URL
             required: true
 
     jobs:
@@ -19,37 +20,25 @@ yaml
           - name: Install tools
             run: |
               sudo apt-get update -qq
-              sudo apt-get install -y -qq curl wget python3 2>/dev/null
+              sudo apt-get install -y -qq curl wget
 
-          - name: Fetch from source
+          - name: Fetch from LibGen
+            if: ${{ inputs.source == 'libgen' }}
             run: |
-              case "${{ github.event.inputs.source }}" in
-                libgen)
-                  echo "Searching LibGen for: ${{ github.event.inputs.query }}"
-                  curl -sL "https://libgen.is/search.php?req=${{ github.event.inputs.query }}&open=0&res=25&view=simple&phrase=1&column=def" -o page.html
-                  cat page.html | python3 -c "
-    import sys, re, html
-    with open('page.html') as f:
-        content = f.read()
-    links = re.findall(r'<a[^>]href=\"(book/index\.php[^\"])\"[^>]*>([^<]+)</a>', content)
-    print(f'Found {len(links)} book links')
-    for href, title in links[:5]:
-        print(f'{title.strip()}: {href}')
-    "
-                  ;;
-                direct)
-                  echo "Downloading directly..."
-                  curl -sL -o book.pdf "${{ github.event.inputs.query }}" || echo "Download failed"
-                  ;;
-                *)
-                  echo "Unknown source"
-                  ;;
-              esac
+              curl -sL --max-time 30 "https://libgen.is/search.php?req=${{ inputs.query }}" -o page.html
+              wc -c page.html
+              head -c 3000 page.html
 
-          - name: Upload PDF if found
+          - name: Direct download
+            if: ${{ inputs.source == 'direct' }}
+            run: |
+              curl -sL --max-time 60 -o book.pdf "${{ inputs.query }}"
+              ls -la book.pdf
+
+          - name: Upload
             uses: actions/upload-artifact@v4
             with:
-              name: result
+              name: output
               path: |
                 book.pdf
                 page.html

@@ -5,24 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          cd /tmp
-          echo "=== 1. Anna's Archive ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" -o aa.html "https://annas-archive.org/search?q=9780128022405" 2>&1
-          echo "AA exit=$? size=$(wc -c < aa.html)"
-          grep -o '<h3[^>]*>[^<]*</h3>' aa.html 2>/dev/null | head -5
+          set +e
+          echo "=== 1. LibGen POST by ISBN ==="
+          curl -sL --connect-timeout 20 --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o /tmp/lg.html
+          echo "exit=$? size=$(wc -c < /tmp/lg.html)"
+          grep -oP '\d+\.\d+' /tmp/lg.html | head -3
+          grep -oP '(?<=<td>)[^<]+' /tmp/lg.html | head -30
           
-          echo "=== 2. LibGen ==="
-          curl -sL --connect-timeout 15 --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg.html 2>&1
-          echo "LG exit=$? size=$(wc -c < lg.html)"
-          grep -o '<td[^>]*>[^<]*</td>' lg.html 2>/dev/null | head -20
-          
-          echo "=== 3. LibGen title search ==="
-          curl -sL --connect-timeout 15 --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg2.html 2>&1
-          echo "LG2 exit=$? size=$(wc -c < lg2.html)"
-          grep -o '<td[^>]*>[^<]*</td>' lg2.html 2>/dev/null | head -20
-          
-          echo "=== 4. Try alternative libgen mirror ==="
-          for m in "libgen.is" "libgen.rs" "libgen.st"; do
-            curl -sL --connect-timeout 10 --max-time 20 -o m_$m.html "https://$m/index.php?req=9780128022405" 2>&1
-            echo "$m: exit=$? size=$(wc -c < m_$m.html)"
-          done
+          echo "=== 2. LibGen POST by title ==="
+          curl -sL --connect-timeout 20 --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o /tmp/lg2.html
+          echo "exit=$? size=$(wc -c < /tmp/lg2.html)"
+          grep -oP '(?<=<td>)[^<]+' /tmp/lg2.html | head -30

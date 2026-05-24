@@ -6,24 +6,39 @@ jobs:
     steps:
       - run: |
           set +e
-          echo "=== OpenLibrary API ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://openlibrary.org/isbn/9780128022405.json" -o ol.json
-          echo "exit=$? size=$(wc -c < ol.json)"
-          cat ol.json
+          echo "=== ScienceDirect ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.sciencedirect.com/book/9780128022405/pipeline-leak-detection-handbook" -o sd.html
+          echo "exit=$? size=$(wc -c < sd.html)"
+          grep -oP '<title>[^<]+' sd.html
           
-          echo "=== WorldCat via isbnsearch ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://www.isbnsearch.org/isbn/9780128022405" -o isbn.html
-          echo "exit=$? size=$(wc -c < isbn.html)"
-          grep -oP '<title>[^<]+' isbn.html
-          grep -oP '(?<=<meta[^>]*name="description"[^>]*content=")[^"]+' isbn.html
+          echo "=== CAS IOP Library (中科院物理所) ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://lib.iop.ac.cn:8080/opac/search?search=isbn:9780128022405" -o cas.html
+          echo "exit=$? size=$(wc -c < cas.html)" 2>/dev/null
+          echo "N/A"
           
-          echo "=== Google Books no API (direct page) ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://books.google.com/books?vid=ISBN9780128022405" -o gb.html
-          echo "exit=$? size=$(wc -c < gb.html)"
-          grep -oP '<title>[^<]+' gb.html
-          grep -oP '(?<=<meta[^>]*name="description"[^>]*content=")[^"]+' gb.html
+          echo "=== Shanghai Library ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://library.sh.cn/search?isbn=9780128022405" -o sh.html
+          echo "exit=$? size=$(wc -c < sh.html)" 2>/dev/null
           
-          echo "=== DuckDuckGo search ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://lite.duckduckgo.com/lite?q=9780128022405" -o ddg.html
-          echo "exit=$? size=$(wc -c < ddg.html)"
-          grep -oP '(?<=<a[^>]*class="result-link"[^>]*>)[^<]+' ddg.html | head -5
+          echo "=== Tsinghua FC (清华外国教材中心) ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.lib.tsinghua.edu.cn/zc/findBook?isbn=9780128022405" -o thu.html
+          echo "exit=$? size=$(wc -c < thu.html)" 2>/dev/null
+          
+          echo "=== St Andrews University Library ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://encore.st-andrews.ac.uk/iii/encore/search/C__S9780128022405" -o sta.html
+          echo "exit=$? size=$(wc -c < sta.html)"
+          grep -oP '<title>[^<]+' sta.html
+          
+          echo "=== CAS Literature Center (las.ac.cn) ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://www.las.ac.cn/search?q=9780128022405" -o las.html
+          echo "exit=$? size=$(wc -c < las.html)" 2>/dev/null
+          
+          echo "=== Everand (Scribd) ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.everand.com/search?query=9780128022405" -o ev.html
+          echo "exit=$? size=$(wc -c < ev.html)"
+          grep -oP '<title>[^<]+' ev.html
+          
+          echo "=== vdoc.pub ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://vdoc.pub/search/9780128022405" -o vd.html
+          echo "exit=$? size=$(wc -c < vd.html)"
+          grep -oP '<title>[^<]+' vd.html

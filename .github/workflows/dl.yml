@@ -1,0 +1,9 @@
+name: dl
+on: workflow_dispatch
+jobs:
+  dl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install requests 2>&1 | tail -1
+      - run: python3 main.py

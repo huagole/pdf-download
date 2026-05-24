@@ -6,14 +6,26 @@ jobs:
     steps:
       - run: |
           set +e
-          echo "=== LibGen HTML analysis ==="
-          curl -sL --connect-timeout 20 --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o /tmp/lg.html
-          echo "=== Full HTML (first 3000 chars) ==="
-          head -c 3000 /tmp/lg.html
-          echo ""
-          echo "=== Search for book-related content ==="
-          grep -i 'pipeline\|leak\|detect\|handbook\|no result\|not found' /tmp/lg.html | head -5
-          echo "=== Count table rows ==="
-          grep -c '<tr' /tmp/lg.html
-          echo "=== Any links with md5 or id? ==="
-          grep -oP 'md5=[a-f0-9]+' /tmp/lg.html | head -5
+          echo "=== A. Library.lol (libgen mirror) ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.li/journal.php?req=9780128022405" -o out.html
+          echo "A: exit=$? size=$(wc -c < out.html)"
+          
+          echo "=== B. libgen JSON API ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.li/api.php?mode=search&req=9780128022405&column=isbn" -o api.json
+          echo "B: exit=$? size=$(wc -c < api.json)"
+          head -c 500 api.json
+          
+          echo "=== C. Direct libgen.lol ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.lol/9780128022405" -o lol.html
+          echo "C: exit=$? size=$(wc -c < lol.html)"
+          
+          echo "=== D. Anna's Archive API (DB dump JSON) ==="
+          # Try the direct torrent/metadata API
+          curl -sL --connect-timeout 15 --max-time 30 "https://annas-archive.org/dyn/api/search?search=9780128022405&lang=en" -o aa.json
+          echo "D: exit=$? size=$(wc -c < aa.json)"
+          head -c 500 aa.json
+          
+          echo "=== E. Google Books API ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://www.googleapis.com/books/v1/volumes?q=isbn:9780128022405" -o gb.json
+          echo "E: exit=$? size=$(wc -c < gb.json)"
+          head -c 1000 gb.json

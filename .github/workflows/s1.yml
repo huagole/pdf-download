@@ -6,39 +6,17 @@ jobs:
     steps:
       - run: |
           set +e
-          echo "=== ScienceDirect ==="
+          echo "=== ScienceDirect - check if book exists ==="
           curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.sciencedirect.com/book/9780128022405/pipeline-leak-detection-handbook" -o sd.html
-          echo "exit=$? size=$(wc -c < sd.html)"
-          grep -oP '<title>[^<]+' sd.html
+          grep -i '404\|not found\|error\|Pipeline Leak' sd.html | head -5
+          grep -oP '(?<=<span[^>]*class="title[^"]*"[^>]*>)[^<]{10,200}' sd.html | head -5
           
-          echo "=== CAS IOP Library (中科院物理所) ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://lib.iop.ac.cn:8080/opac/search?search=isbn:9780128022405" -o cas.html
-          echo "exit=$? size=$(wc -c < cas.html)" 2>/dev/null
-          echo "N/A"
+          echo "=== Tsinghua - full content ==="
+          cat thu.html | head -c 2000
           
-          echo "=== Shanghai Library ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://library.sh.cn/search?isbn=9780128022405" -o sh.html
-          echo "exit=$? size=$(wc -c < sh.html)" 2>/dev/null
+          echo "=== CAS Literature Center ==="
+          head -c 2000 las.html
           
-          echo "=== Tsinghua FC (清华外国教材中心) ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.lib.tsinghua.edu.cn/zc/findBook?isbn=9780128022405" -o thu.html
-          echo "exit=$? size=$(wc -c < thu.html)" 2>/dev/null
-          
-          echo "=== St Andrews University Library ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://encore.st-andrews.ac.uk/iii/encore/search/C__S9780128022405" -o sta.html
-          echo "exit=$? size=$(wc -c < sta.html)"
+          echo "=== St Andrews library ==="
           grep -oP '<title>[^<]+' sta.html
-          
-          echo "=== CAS Literature Center (las.ac.cn) ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://www.las.ac.cn/search?q=9780128022405" -o las.html
-          echo "exit=$? size=$(wc -c < las.html)" 2>/dev/null
-          
-          echo "=== Everand (Scribd) ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://www.everand.com/search?query=9780128022405" -o ev.html
-          echo "exit=$? size=$(wc -c < ev.html)"
-          grep -oP '<title>[^<]+' ev.html
-          
-          echo "=== vdoc.pub ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://vdoc.pub/search/9780128022405" -o vd.html
-          echo "exit=$? size=$(wc -c < vd.html)"
-          grep -oP '<title>[^<]+' vd.html
+          grep -oP '(?<=<div[^>]*class="brief"[^>]*>)[^<]{10,200}' sta.html | head -3

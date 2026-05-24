@@ -11,24 +11,26 @@ jobs:
           cd book
           MD5="32d5c2bf59851a27cf83c647d207b57e"
           
-          echo "=== 1. Try libgen+ IPFS gateway ==="
-          # LibGen files stored on IPFS via /ipfs/
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://libgen.li/ipfs/$MD5" -o ipfs.bin 2>&1
-          echo "size=$(wc -c < ipfs.bin) type=$(file ipfs.bin)"
-          
-          echo "=== 2. Try direct download via 3lib.net ==="
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://3lib.net/md5/$MD5" -o zlib.html 2>&1
-          echo "size=$(wc -c < zlib.html) type=$(file zlib.html)"
-          grep -oP 'href="[^"]*"' zlib.html | grep -i 'download\|get\|book' | head -10
-          
-          echo "=== 3. Try singlelogin.re (Z-Library) ==="
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://singlelogin.re/md5/$MD5" -o slr.html 2>&1
-          echo "size=$(wc -c < slr.html) type=$(file slr.html)"
-          grep -oP 'href="[^"]*"' slr.html | grep -i 'download\|get\|book' | head -10
-          
-          echo "=== 4. Try Torrific / IPFS gateway ==="
-          for gw in "cloudflare-ipfs.com" "ipfs.io" "gateway.ipfs.io" "ipfs.eternum.io"; do
-            curl -sL --connect-timeout 10 --max-time 30 "https://$gw/ipfs/$MD5" -o gw_$gw.bin 2>&1
-            echo "$gw: exit=$? size=$(wc -c < gw_$gw.bin) type=$(file gw_$gw.bin)"
-            head -c 80 gw_$gw.bin
+          echo "=== Try LibGen directory structure ==="
+          # LibGen files: /books/32/d5/32d5c2bf59851a27cf83c647d207b57e (some mirrors)
+          for base in "https://libgen.li/img" "https://libgen.li/books" "https://libgen.li/book"; do
+            url="$base/${MD5:0:2}/${MD5:2:2}/$MD5"
+            curl -sIL --connect-timeout 10 --max-time 20 -H "User-Agent: Mozilla/5.0" "$url" 2>&1
+            echo "---"
           done
+          
+          echo "=== Try different download endpoints ==="
+          # libgen.li uses a specific download format
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0"             -b "li_session=test; adult=1; user=1"             "https://libgen.li/get.php?md5=$MD5&key=test" -o test.bin 2>&1
+          echo "test.bin: size=$(wc -c < test.bin) type=$(file test.bin)"
+          
+          echo "=== Try with referer ==="
+          curl -sL --connect-timeout 20 --max-time 60             -H "User-Agent: Mozilla/5.0"             -H "Referer: https://libgen.li/index.php"             "https://libgen.li/get.php?md5=$MD5" -o ref.bin 2>&1
+          echo "ref.bin: size=$(wc -c < ref.bin) type=$(file ref.bin)"
+          head -c 100 ref.bin
+          
+          echo "=== Try file server download ==="
+          # Files are on download servers like download.library.lol
+          curl -sL --connect-timeout 20 --max-time 60 "http://download.library.lol/main/${MD5:0:2}/${MD5:2:2}/$MD5" -o dl.bin 2>&1
+          echo "dl.bin: exit=$? size=$(wc -c < dl.bin) type=$(file dl.bin)"
+          head -c 100 dl.bin

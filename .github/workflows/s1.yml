@@ -4,55 +4,29 @@ jobs:
   s:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - run: pip install requests bs4 lxml 2>&1 | tail -1
       - run: |
-          pip install requests beautifulsoup4 lxml 2>&1 | tail -3
-          python3 << 'PYEOF'
-import requests, re, json
-
-# Try to find the actual download URL from Google Books
-# The book ID is YO0OkAEACAAJ
-book_id = "YO0OkAEACAAJ"
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-}
-
-# Try Google Books download page
+          python3 << 'EOF'
+import requests, re
+bid = "YO0OkAEACAAJ"
+h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 urls = [
-    f"https://books.google.com/books/download?id={book_id}&printsec=frontcover&output=pdf",
-    f"https://books.google.com/books?id={book_id}&printsec=frontcover",
-    f"https://play.google.com/store/books/details?id={book_id}",
+    f"https://books.google.com/books/download?id={bid}&printsec=frontcover&output=pdf",
+    f"https://books.google.com/books?id={bid}&printsec=frontcover",
 ]
-
 for url in urls:
     try:
-        r = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
-        print(f"URL: {url[:80]}")
-        print(f"  Status: {r.status_code}, Size: {len(r.content)}")
-        
-        # Look for PDF download link patterns
-        patterns = [
-            r'href="([^"]+\.pdf[^"]*)"',
-            r'href="([^"]*download[^"]*)"',
-            r'(\/books\/edition\/[^"]+\.pdf)',
-        ]
-        for p in patterns:
-            matches = re.findall(p, r.text)
-            for m in matches[:3]:
-                print(f"  Found: {m[:150]}")
-        
-        # Check if it's a PDF
-        ct = r.headers.get('Content-Type', '')
-        if 'application/pdf' in ct or r.content.startswith(b'%PDF'):
-            with open('/tmp/book.pdf', 'wb') as f:
-                f.write(r.content)
-            print(f"  PDF DOWNLOADED! Size: {len(r.content)} bytes")
+        r = requests.get(url, headers=h, timeout=30, allow_redirects=True)
+        print(f"URL[:60]: {r.status_code} {len(r.content)}b ct={r.headers.get('Content-Type','?')[:30]}")
+        if r.content[:4] == b'%PDF':
+            open('/tmp/book.pdf','wb').write(r.content)
+            print(f"DOWNLOADED! {len(r.content)} bytes")
             break
+        for m in re.findall(r'href="([^"]+pdf[^"]*)"', r.text)[:5]:
+            print(f"  PDF link: {m[:120]}")
+        for m in re.findall(r'href="([^"]*download[^"]*)"', r.text)[:5]:
+            print(f"  DL link: {m[:120]}")
     except Exception as e:
         print(f"  Error: {e}")
-
-print("\n=== Done ===")
-PYEOF
+print("DONE")
+EOF

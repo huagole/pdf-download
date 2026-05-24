@@ -11,27 +11,24 @@ jobs:
           cd book
           MD5="32d5c2bf59851a27cf83c647d207b57e"
           
-          echo "=== 1. libgen.li download page ==="
-          curl -sL --connect-timeout 20 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://libgen.li/ads.php?md5=$MD5" -o ads.html
-          echo "size=$(wc -c < ads.html)"
-          # Extract direct download links from the page
-          grep -oP 'href="https?://[^"]*"' ads.html | head -10
+          echo "=== 1. Try libgen+ IPFS gateway ==="
+          # LibGen files stored on IPFS via /ipfs/
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://libgen.li/ipfs/$MD5" -o ipfs.bin 2>&1
+          echo "size=$(wc -c < ipfs.bin) type=$(file ipfs.bin)"
           
-          echo "=== 2. libgen.pw download page ==="
-          curl -sL --connect-timeout 20 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://libgen.pw/book/$MD5" -o pw.html
-          echo "size=$(wc -c < pw.html)"
-          grep -oP 'href="[^"]*"' pw.html | grep -v 'css\|js\|#' | head -20
+          echo "=== 2. Try direct download via 3lib.net ==="
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://3lib.net/md5/$MD5" -o zlib.html 2>&1
+          echo "size=$(wc -c < zlib.html) type=$(file zlib.html)"
+          grep -oP 'href="[^"]*"' zlib.html | grep -i 'download\|get\|book' | head -10
           
-          echo "=== 3. Try get with content-disposition ==="
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://libgen.li/get.php?md5=$MD5&key=abc" -o out.bin 2>&1
-          echo "size=$(wc -c < out.bin) type=$(file out.bin)"
-          head -c 80 out.bin
+          echo "=== 3. Try singlelogin.re (Z-Library) ==="
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://singlelogin.re/md5/$MD5" -o slr.html 2>&1
+          echo "size=$(wc -c < slr.html) type=$(file slr.html)"
+          grep -oP 'href="[^"]*"' slr.html | grep -i 'download\|get\|book' | head -10
           
-          echo "=== 4. Try libgen.rocks ==="
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://libgen.rocks/get.php?md5=$MD5" -o rocks.bin 2>&1
-          echo "rocks: size=$(wc -c < rocks.bin) type=$(file rocks.bin)"
-          head -c 80 rocks.bin
-          
-          echo "=== 5. Try library.lol ==="
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "https://libgen.li/main/$MD5" -o lol.bin 2>&1
-          echo "lol: size=$(wc -c < lol.bin) type=$(file lol.bin)"
+          echo "=== 4. Try Torrific / IPFS gateway ==="
+          for gw in "cloudflare-ipfs.com" "ipfs.io" "gateway.ipfs.io" "ipfs.eternum.io"; do
+            curl -sL --connect-timeout 10 --max-time 30 "https://$gw/ipfs/$MD5" -o gw_$gw.bin 2>&1
+            echo "$gw: exit=$? size=$(wc -c < gw_$gw.bin) type=$(file gw_$gw.bin)"
+            head -c 80 gw_$gw.bin
+          done

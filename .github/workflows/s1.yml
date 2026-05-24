@@ -7,11 +7,31 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== Get download links from LibGen ==="
-          curl -sL --connect-timeout 20 --max-time 30 "https://libgen.li/index.php?req=9780128022405&columns%5B%5D=t&columns%5B%5D=a&columns%5B%5D=s&columns%5B%5D=y&columns%5B%5D=p&columns%5B%5D=i&res=25&sort=def&sortmode=ASC&page=1" -o lg.html
-          echo "=== Extract all td content ==="
-          grep -oP '<td[^>]*>[^<]{1,500}</td>' lg.html | head -50
-          echo "=== Extract links with md5 ==="
-          grep -oP 'md5=[0-9a-f]{32}' lg.html | head -5
-          echo "=== Extract all href with download ==="
-          grep -oP 'href="[^"]*"' lg.html | grep -i 'md5\|download\|get\|libgen' | head -10
+          mkdir -p book
+          cd book
+          echo "=== Try download from multiple mirrors ==="
+          MD5="32d5c2bf59851a27cf83c647d207b57e"
+          
+          # Try libgen.pw download
+          echo "--- libgen.pw ---"
+          curl -sL --connect-timeout 20 --max-time 60 "https://libgen.pw/book/$MD5" -o page.html
+          echo "page size=$(wc -c < page.html)"
+          grep -oP 'href="[^"]*download[^"]*"' page.html | head -3
+          
+          # Try direct download from libgen.li
+          echo "--- libgen.li get ---"
+          curl -sL --connect-timeout 20 --max-time 60 "https://libgen.li/ads.php?md5=$MD5" -o /dev/null -w "%{redirect_url}" 2>/dev/null
+          echo ""
+          
+          # Try get.php
+          echo "--- get.php ---"
+          curl -sL --connect-timeout 20 --max-time 60 "https://libgen.li/get.php?md5=$MD5" -o output.pdf 2>&1
+          echo "exit=$? size=$(wc -c < output.pdf)"
+          file output.pdf
+          head -c 100 output.pdf
+          
+          # If that didn't work, try the onion mirror via clearnet
+          echo "--- bookfi.net ---"
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" "http://bookfi.net/md5/$MD5" -o bf.html
+          echo "exit=$? size=$(wc -c < bf.html)"
+          grep -oP 'href="[^"]*"' bf.html | grep -i 'download\|get' | head -5

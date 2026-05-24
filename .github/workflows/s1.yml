@@ -6,13 +6,14 @@ jobs:
     steps:
       - run: |
           set +e
-          echo "=== 1. LibGen POST by ISBN ==="
+          echo "=== LibGen HTML analysis ==="
           curl -sL --connect-timeout 20 --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o /tmp/lg.html
-          echo "exit=$? size=$(wc -c < /tmp/lg.html)"
-          grep -oP '\d+\.\d+' /tmp/lg.html | head -3
-          grep -oP '(?<=<td>)[^<]+' /tmp/lg.html | head -30
-          
-          echo "=== 2. LibGen POST by title ==="
-          curl -sL --connect-timeout 20 --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o /tmp/lg2.html
-          echo "exit=$? size=$(wc -c < /tmp/lg2.html)"
-          grep -oP '(?<=<td>)[^<]+' /tmp/lg2.html | head -30
+          echo "=== Full HTML (first 3000 chars) ==="
+          head -c 3000 /tmp/lg.html
+          echo ""
+          echo "=== Search for book-related content ==="
+          grep -i 'pipeline\|leak\|detect\|handbook\|no result\|not found' /tmp/lg.html | head -5
+          echo "=== Count table rows ==="
+          grep -c '<tr' /tmp/lg.html
+          echo "=== Any links with md5 or id? ==="
+          grep -oP 'md5=[a-f0-9]+' /tmp/lg.html | head -5

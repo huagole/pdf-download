@@ -1,0 +1,35 @@
+name: getpdf
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to download'
+        default: ''
+        required: false
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pip install requests 2>&1 | tail -1
+      - run: |
+          python3 << 'PYEOF'
+import requests, re
+bid="YO0OkAEACAAJ"
+h={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+urls=[f"https://books.google.com/books/download?id={bid}&printsec=frontcover&output=pdf",f"https://books.google.com/books?id={bid}&printsec=frontcover"]
+for u in urls:
+ try:
+  r=requests.get(u,headers=h,timeout=30,allow_redirects=True)
+  print(f"{u[:60]}: {r.status_code} {len(r.content)}b ct={r.headers.get('Content-Type','?')[:40]}")
+  if r.content[:4]==b"%PDF":
+   open("/tmp/book.pdf","wb").write(r.content)
+   print(f"DOWNLOADED! {len(r.content)} bytes")
+   break
+  for m in re.findall(r'href="([^"]+pdf[^"]*)"',r.text)[:5]:
+   print(f"PDF link: {m[:120]}")
+  for m in re.findall(r'href="([^"]*download[^"]*)"',r.text)[:5]:
+   print(f"DL link: {m[:120]}")
+ except Exception as e:
+  print(f"Err: {e}")
+print("DONE")
+PYEOF

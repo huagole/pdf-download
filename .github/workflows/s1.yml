@@ -5,16 +5,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          set +e
           cd /tmp
-          echo "=== 1. Annas Archive ==="
-          curl -sL --max-time 30 -o aa.html "https://annas-archive.org/search?q=9780128022405"
-          echo "Size: $(wc -c < aa.html)"
-          grep -oP '(?<=<h3[^>]*>)[^<]{3,200}' aa.html | head -10
-          echo "=== 2. LibGen POST ==="
-          curl -sL --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg.html
-          echo "Size: $(wc -c < lg.html)"
-          grep -oP '(?<=<td[^>]*>)[^<]{3,200}' lg.html | head -20
-          echo "=== 3. Library.lol ==="
-          curl -sL --max-time 30 -A 'Mozilla/5.0' "https://libgen.li/journal.php?req=9780128022405" -o j.html
-          echo "Size: $(wc -c < j.html)" 2>/dev/null
+          echo "=== 1. Anna's Archive ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" -o aa.html "https://annas-archive.org/search?q=9780128022405" 2>&1
+          echo "AA exit=$? size=$(wc -c < aa.html)"
+          grep -o '<h3[^>]*>[^<]*</h3>' aa.html 2>/dev/null | head -5
+          
+          echo "=== 2. LibGen ==="
+          curl -sL --connect-timeout 15 --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg.html 2>&1
+          echo "LG exit=$? size=$(wc -c < lg.html)"
+          grep -o '<td[^>]*>[^<]*</td>' lg.html 2>/dev/null | head -20
+          
+          echo "=== 3. LibGen title search ==="
+          curl -sL --connect-timeout 15 --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg2.html 2>&1
+          echo "LG2 exit=$? size=$(wc -c < lg2.html)"
+          grep -o '<td[^>]*>[^<]*</td>' lg2.html 2>/dev/null | head -20
+          
+          echo "=== 4. Try alternative libgen mirror ==="
+          for m in "libgen.is" "libgen.rs" "libgen.st"; do
+            curl -sL --connect-timeout 10 --max-time 20 -o m_$m.html "https://$m/index.php?req=9780128022405" 2>&1
+            echo "$m: exit=$? size=$(wc -c < m_$m.html)"
+          done

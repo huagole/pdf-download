@@ -7,23 +7,14 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== 1. Try libgen.li with proper form fields ==="
-          curl -sL --max-time 30 -d "req=9780128022405&lg_topic=libgen&open=0&view=simple&res=100&phrase=1&column=def" "https://libgen.li/index.php" -o r1.html
-          echo "Size: $(wc -c < r1.html)"
-          grep -i 'Pipeline\|Leak\|Detect' r1.html | head -5
-          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r1.html | head -20
-          
-          echo "=== 2. libgen.li GET with topic ==="
-          curl -sL --max-time 30 "https://libgen.li/index.php?req=9780128022405&lg_topic=libgen&open=0&view=simple&res=100&phrase=1&column=def" -o r2.html
-          echo "Size: $(wc -c < r2.html)"
-          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r2.html | head -20
-          
-          echo "=== 3. Try libgen.rocks ==="
-          curl -sL --max-time 30 -A 'Mozilla/5.0' "https://libgen.rocks/index.php?req=9780128022405" -o r3.html
-          echo "Size: $(wc -c < r3.html)" 2>/dev/null
-          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r3.html 2>/dev/null | head -20
-          
-          echo "=== 4. libgen.li search by PipeLine Leak Detection Handbook ==="
-          curl -sL --max-time 30 -d "req=Pipeline+Leak+Detection+Handbook&lg_topic=libgen&open=0&view=simple&res=100" "https://libgen.li/index.php" -o r4.html
-          echo "Size: $(wc -c < r4.html)"
-          grep -oP '(?<=<td[^>]*>)[^<]{5,120}(?=</td>)' r4.html | head -20
+          echo "=== 1. Annas Archive ==="
+          curl -sL --max-time 30 -o aa.html "https://annas-archive.org/search?q=9780128022405"
+          echo "Size: $(wc -c < aa.html)"
+          grep -oP '(?<=<h3[^>]*>)[^<]{3,200}' aa.html | head -10
+          echo "=== 2. LibGen POST ==="
+          curl -sL --max-time 30 -d "req=9780128022405&lg_topic=libgen&res=100" "https://libgen.li/index.php" -o lg.html
+          echo "Size: $(wc -c < lg.html)"
+          grep -oP '(?<=<td[^>]*>)[^<]{3,200}' lg.html | head -20
+          echo "=== 3. Library.lol ==="
+          curl -sL --max-time 30 -A 'Mozilla/5.0' "https://libgen.li/journal.php?req=9780128022405" -o j.html
+          echo "Size: $(wc -c < j.html)" 2>/dev/null

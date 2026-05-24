@@ -7,17 +7,21 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== Try Internet Archive ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://archive.org/search?query=9780128022405" -o ia.html 2>&1
-          echo "ia: exit=$? size=$(wc -c < ia.html)"
-          grep -oP 'href="[^"]*details[^"]*"' ia.html | head -5
+          echo "=== Get Google Books page for download links ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            "https://books.google.com/books?vid=ISBN9780128022405&printsec=frontcover" -o gb.html 2>&1
+          echo "gb: exit=$? size=$(wc -c < gb.html)"
           
-          echo "=== Try Google Books directly ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://www.googleapis.com/books/v1/volumes?q=isbn:9780128022405" -o gb.json 2>&1
-          echo "gb: exit=$? size=$(wc -c < gb.json)"
-          cat gb.json | python3 -m json.tool 2>/dev/null | head -30
+          echo "=== Extract all download-related URLs ==="
+          grep -oP '(download|pdf|epub)[^"<>]{1,200}' gb.html | head -20
+          grep -oP 'download-pdf-link"[^>]*>[^<]*' gb.html | head -5
+          grep -oP 'href="[^"]*download[^"]*"' gb.html | head -10
+          grep -oP 'https?://[^"]*download[^"]*' gb.html | head -10
           
-          echo "=== Try Google Books preview ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://books.google.com/books?vid=ISBN9780128022405" -o gbp.html 2>&1
-          echo "gbp: exit=$? size=$(wc -c < gbp.html)"
-          grep -oP 'download[^"]*"' gbp.html | head -5
+          echo "=== Extract book ID ==="
+          grep -oP 'id=[A-Za-z0-9_]+' gb.html | head -10
+          
+          echo "=== Try Google Books download API ==="
+          # Google Books uses a download URL like:
+          # https://books.google.com/books/download/.../pdf
+          grep -oP 'https?://[^"]*books\.google[^"]*/download[^"]*' gb.html | head -5

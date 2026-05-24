@@ -7,30 +7,16 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          mkdir -p book
-          cd book
-          MD5="32d5c2bf59851a27cf83c647d207b57e"
+          echo "=== Annas Archive JSON API ==="
+          curl -sL --connect-timeout 20 --max-time 30 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64)" "https://annas-archive.se/dyn/redirect/md5/32d5c2bf59851a27cf83c647d207b57e" -o aa.html 2>&1
+          echo "aa.html: size=$(wc -c < aa.html) type=$(file aa.html)"
+          cat aa.html | head -5
           
-          echo "=== Try LibGen directory structure ==="
-          # LibGen files: /books/32/d5/32d5c2bf59851a27cf83c647d207b57e (some mirrors)
-          for base in "https://libgen.li/img" "https://libgen.li/books" "https://libgen.li/book"; do
-            url="$base/${MD5:0:2}/${MD5:2:2}/$MD5"
-            curl -sIL --connect-timeout 10 --max-time 20 -H "User-Agent: Mozilla/5.0" "$url" 2>&1
-            echo "---"
-          done
+          echo "=== Try AA fast redirect ==="
+          curl -sIL --connect-timeout 20 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://annas-archive.se/md5/32d5c2bf59851a27cf83c647d207b57e" 2>&1 | grep -i 'location\|http/'
           
-          echo "=== Try different download endpoints ==="
-          # libgen.li uses a specific download format
-          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0"             -b "li_session=test; adult=1; user=1"             "https://libgen.li/get.php?md5=$MD5&key=test" -o test.bin 2>&1
-          echo "test.bin: size=$(wc -c < test.bin) type=$(file test.bin)"
-          
-          echo "=== Try with referer ==="
-          curl -sL --connect-timeout 20 --max-time 60             -H "User-Agent: Mozilla/5.0"             -H "Referer: https://libgen.li/index.php"             "https://libgen.li/get.php?md5=$MD5" -o ref.bin 2>&1
-          echo "ref.bin: size=$(wc -c < ref.bin) type=$(file ref.bin)"
-          head -c 100 ref.bin
-          
-          echo "=== Try file server download ==="
-          # Files are on download servers like download.library.lol
-          curl -sL --connect-timeout 20 --max-time 60 "http://download.library.lol/main/${MD5:0:2}/${MD5:2:2}/$MD5" -o dl.bin 2>&1
-          echo "dl.bin: exit=$? size=$(wc -c < dl.bin) type=$(file dl.bin)"
-          head -c 100 dl.bin
+          echo "=== Try direct download from AA file host ==="
+          # AA uses ipfs or fastly
+          curl -sL --connect-timeout 20 --max-time 60 -H "User-Agent: Mozilla/5.0" -o aa_dl.bin "https://annas-archive.se/dyn/file/md5/32d5c2bf59851a27cf83c647d207b57e" 2>&1
+          echo "aa_dl: size=$(wc -c < aa_dl.bin) type=$(file aa_dl.bin)"
+          head -c 100 aa_dl.bin

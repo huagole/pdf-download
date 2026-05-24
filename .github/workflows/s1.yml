@@ -7,37 +7,22 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== 1. ScienceDirect ==="
+          echo "=== ScienceDirect content detail ==="
           curl -sL --connect-timeout 15 --max-time 30 \
-            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
             "https://www.sciencedirect.com/book/9780128022405/pipeline-leak-detection-handbook" -o sd.html 2>&1
-          echo "sd: exit=$? size=$(wc -c < sd.html)"
-          grep -oP 'download|pdf|epub|purchase|rent' sd.html | sort | uniq -c | sort -rn | head -10
+          grep -oP 'EUR|USD|price|rent|buy|purchase|[0-9]+\.[0-9]{2}' sd.html | sort | uniq -c | sort -rn | head -10
+          grep -oP 'title="[^"]*Pipeline[^"]*"' sd.html | head -3
+          grep -oP 'description":"[^"]{20,200}"' sd.html | head -3
+          grep -oP 'author":"[^"]*"' sd.html | head -3
           
-          echo "=== 2. ScienceDirect use direct ISBN ==="
-          curl -sIL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
-            "https://www.sciencedirect.com/book/9780128022405" 2>&1 | grep -i 'location\|http/'
-          
-          echo "=== 3. St Andrews University library ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
-            "https://st-andrews.primo.exlibrisgroup.com/discovery/search?query=isbn,exact,9780128022405&tab=LibraryCatalog&search_scope=MyInst_and_CI&vid=44STAUK_STA:44STAUK_STA&offset=0" -o sa.html 2>&1
-          echo "sta: exit=$? size=$(wc -c < sa.html)"
-          grep -oP 'Pipeline|Leak|Detection|Henrie' sa.html | head -5
-          
-          echo "=== 4. CAS Literature Center ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
-            "https://www.las.ac.cn/search?q=9780128022405&from=standard&searchSource=normal" -o cas.html 2>&1
-          echo "cas: exit=$? size=$(wc -c < cas.html)"
-          grep -oP 'Pipeline|Henrie' cas.html | head -5
-          
-          echo "=== 5. vdoc.pub ==="
+          echo "=== vdoc.pub detail ==="
           curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
             "https://vdoc.pub/search/9780128022405" -o vd.html 2>&1
-          echo "vd: exit=$? size=$(wc -c < vd.html)"
-          grep -oP 'Pipeline|download|pdf' vd.html | head -10
+          grep -oP '<title>[^<]*' vd.html
+          grep -oP 'Pipeline[^<]*' vd.html | head -5
           
-          echo "=== 6. Everand ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+          echo "=== Everand detail ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
             "https://www.everand.com/search?query=9780128022405" -o ev.html 2>&1
-          echo "ev: exit=$? size=$(wc -c < ev.html)"
-          grep -oP 'Pipeline|download|pdf|Henrie' ev.html | head -10
+          grep -oP 'Pipeline[^<]*' ev.html | head -5

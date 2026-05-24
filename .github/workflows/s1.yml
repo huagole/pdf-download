@@ -6,26 +6,24 @@ jobs:
     steps:
       - run: |
           set +e
-          echo "=== A. Library.lol (libgen mirror) ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.li/journal.php?req=9780128022405" -o out.html
-          echo "A: exit=$? size=$(wc -c < out.html)"
+          echo "=== OpenLibrary API ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://openlibrary.org/isbn/9780128022405.json" -o ol.json
+          echo "exit=$? size=$(wc -c < ol.json)"
+          cat ol.json
           
-          echo "=== B. libgen JSON API ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.li/api.php?mode=search&req=9780128022405&column=isbn" -o api.json
-          echo "B: exit=$? size=$(wc -c < api.json)"
-          head -c 500 api.json
+          echo "=== WorldCat via isbnsearch ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "http://www.isbnsearch.org/isbn/9780128022405" -o isbn.html
+          echo "exit=$? size=$(wc -c < isbn.html)"
+          grep -oP '<title>[^<]+' isbn.html
+          grep -oP '(?<=<meta[^>]*name="description"[^>]*content=")[^"]+' isbn.html
           
-          echo "=== C. Direct libgen.lol ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://libgen.lol/9780128022405" -o lol.html
-          echo "C: exit=$? size=$(wc -c < lol.html)"
+          echo "=== Google Books no API (direct page) ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://books.google.com/books?vid=ISBN9780128022405" -o gb.html
+          echo "exit=$? size=$(wc -c < gb.html)"
+          grep -oP '<title>[^<]+' gb.html
+          grep -oP '(?<=<meta[^>]*name="description"[^>]*content=")[^"]+' gb.html
           
-          echo "=== D. Anna's Archive API (DB dump JSON) ==="
-          # Try the direct torrent/metadata API
-          curl -sL --connect-timeout 15 --max-time 30 "https://annas-archive.org/dyn/api/search?search=9780128022405&lang=en" -o aa.json
-          echo "D: exit=$? size=$(wc -c < aa.json)"
-          head -c 500 aa.json
-          
-          echo "=== E. Google Books API ==="
-          curl -sL --connect-timeout 15 --max-time 30 "https://www.googleapis.com/books/v1/volumes?q=isbn:9780128022405" -o gb.json
-          echo "E: exit=$? size=$(wc -c < gb.json)"
-          head -c 1000 gb.json
+          echo "=== DuckDuckGo search ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" "https://lite.duckduckgo.com/lite?q=9780128022405" -o ddg.html
+          echo "exit=$? size=$(wc -c < ddg.html)"
+          grep -oP '(?<=<a[^>]*class="result-link"[^>]*>)[^<]+' ddg.html | head -5

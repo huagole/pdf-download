@@ -7,21 +7,37 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== Get Google Books page for download links ==="
-          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            "https://books.google.com/books?vid=ISBN9780128022405&printsec=frontcover" -o gb.html 2>&1
-          echo "gb: exit=$? size=$(wc -c < gb.html)"
+          echo "=== 1. ScienceDirect ==="
+          curl -sL --connect-timeout 15 --max-time 30 \
+            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
+            "https://www.sciencedirect.com/book/9780128022405/pipeline-leak-detection-handbook" -o sd.html 2>&1
+          echo "sd: exit=$? size=$(wc -c < sd.html)"
+          grep -oP 'download|pdf|epub|purchase|rent' sd.html | sort | uniq -c | sort -rn | head -10
           
-          echo "=== Extract all download-related URLs ==="
-          grep -oP '(download|pdf|epub)[^"<>]{1,200}' gb.html | head -20
-          grep -oP 'download-pdf-link"[^>]*>[^<]*' gb.html | head -5
-          grep -oP 'href="[^"]*download[^"]*"' gb.html | head -10
-          grep -oP 'https?://[^"]*download[^"]*' gb.html | head -10
+          echo "=== 2. ScienceDirect use direct ISBN ==="
+          curl -sIL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://www.sciencedirect.com/book/9780128022405" 2>&1 | grep -i 'location\|http/'
           
-          echo "=== Extract book ID ==="
-          grep -oP 'id=[A-Za-z0-9_]+' gb.html | head -10
+          echo "=== 3. St Andrews University library ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://st-andrews.primo.exlibrisgroup.com/discovery/search?query=isbn,exact,9780128022405&tab=LibraryCatalog&search_scope=MyInst_and_CI&vid=44STAUK_STA:44STAUK_STA&offset=0" -o sa.html 2>&1
+          echo "sta: exit=$? size=$(wc -c < sa.html)"
+          grep -oP 'Pipeline|Leak|Detection|Henrie' sa.html | head -5
           
-          echo "=== Try Google Books download API ==="
-          # Google Books uses a download URL like:
-          # https://books.google.com/books/download/.../pdf
-          grep -oP 'https?://[^"]*books\.google[^"]*/download[^"]*' gb.html | head -5
+          echo "=== 4. CAS Literature Center ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://www.las.ac.cn/search?q=9780128022405&from=standard&searchSource=normal" -o cas.html 2>&1
+          echo "cas: exit=$? size=$(wc -c < cas.html)"
+          grep -oP 'Pipeline|Henrie' cas.html | head -5
+          
+          echo "=== 5. vdoc.pub ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://vdoc.pub/search/9780128022405" -o vd.html 2>&1
+          echo "vd: exit=$? size=$(wc -c < vd.html)"
+          grep -oP 'Pipeline|download|pdf' vd.html | head -10
+          
+          echo "=== 6. Everand ==="
+          curl -sL --connect-timeout 15 --max-time 30 -H "User-Agent: Mozilla/5.0" \
+            "https://www.everand.com/search?query=9780128022405" -o ev.html 2>&1
+          echo "ev: exit=$? size=$(wc -c < ev.html)"
+          grep -oP 'Pipeline|download|pdf|Henrie' ev.html | head -10

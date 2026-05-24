@@ -7,21 +7,17 @@ jobs:
       - run: |
           set +e
           cd /tmp
-          echo "=== Check DNS resolution ==="
-          getent hosts annas-archive.se 2>&1 || echo "annas-archive.se: DNS fail"
-          getent hosts libgen.li 2>&1 || echo "libgen.li: DNS fail"
-          getent hosts google.com 2>&1 || echo "google.com: DNS fail"
+          echo "=== Try Internet Archive ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://archive.org/search?query=9780128022405" -o ia.html 2>&1
+          echo "ia: exit=$? size=$(wc -c < ia.html)"
+          grep -oP 'href="[^"]*details[^"]*"' ia.html | head -5
           
-          echo "=== Try with CloudFlare DNS ==="
-          curl -sL --connect-timeout 15 --max-time 30 --resolve "annas-archive.se:443:1.1.1.1"             -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"             "https://annas-archive.se/md5/32d5c2bf59851a27cf83c647d207b57e" -o aa2.html 2>&1
-          echo "aa2: exit=$? size=$(wc -c < aa2.html) type=$(file aa2.html)"
-          head -c 200 aa2.html
+          echo "=== Try Google Books directly ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://www.googleapis.com/books/v1/volumes?q=isbn:9780128022405" -o gb.json 2>&1
+          echo "gb: exit=$? size=$(wc -c < gb.json)"
+          cat gb.json | python3 -m json.tool 2>/dev/null | head -30
           
-          echo "=== Try AA with Google DNS ==="
-          curl -sL --connect-timeout 15 --max-time 30             -H "User-Agent: Mozilla/5.0"             "https://annas-archive.se/md5/32d5c2bf59851a27cf83c647d207b57e" -o aa3.html 2>&1
-          echo "aa3: exit=$? size=$(wc -c < aa3.html) type=$(file aa3.html)"
-          
-          echo "=== Try AA gs API ==="
-          curl -sL --connect-timeout 15 --max-time 30             -H "User-Agent: Mozilla/5.0"             "https://annas-archive.se/dyn/api/md5/32d5c2bf59851a27cf83c647d207b57e" -o api.json 2>&1
-          echo "api: exit=$? size=$(wc -c < api.json) type=$(file api.json)"
-          cat api.json | head -5
+          echo "=== Try Google Books preview ==="
+          curl -sL --connect-timeout 15 --max-time 30 "https://books.google.com/books?vid=ISBN9780128022405" -o gbp.html 2>&1
+          echo "gbp: exit=$? size=$(wc -c < gbp.html)"
+          grep -oP 'download[^"]*"' gbp.html | head -5
